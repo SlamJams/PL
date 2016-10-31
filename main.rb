@@ -2,6 +2,9 @@ require 'net/http'
 require 'uri'
 require 'nokogiri'
 require 'thread'
+require 'parallel'
+
+
 
 def read_file
     content = File.readlines("isbnList.txt").collect{ |e| e.strip || e}
@@ -19,7 +22,7 @@ def get_title_and_rank_for_isbn(isbn)
     url = URI.parse(encoded_url)
 
     response = Net::HTTP.start(url.host, use_ssl: true) do |http|
-        http.get url.request_uri, 'User-Agent' => 'Mozilla/6.0'
+        http.get url.request_uri, 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36'
     end
 
     page = Nokogiri::HTML response.body
@@ -56,6 +59,18 @@ def concurrent_run(isbns)
     
     puts "Program completed in #{finish - start} seconds."
 end
+    
+def lock_free_run(isbns)
+    
+    start = Time.now
+    
+    titleAndRanks = get_title_and_rank_for_isbn_lock_free(isbns)
+    print_report(titleAndRanks)
+    finish = Time.now
+    
+    puts "Program completed in #{finish - start} seconds"
+end
+    
 
 def get_title_and_rank_for_isbn_concurrent(isbn)
 
@@ -65,7 +80,7 @@ def get_title_and_rank_for_isbn_concurrent(isbn)
 
     for e in isbn
         threads << Thread.new(e) do |e|
-
+            
             book = get_title_and_rank_for_isbn(e) 
 
             mutex.synchronize do
@@ -77,7 +92,49 @@ def get_title_and_rank_for_isbn_concurrent(isbn)
     threads.map(&:join) 
     titleAndRanks   
 end
+    
+def get_title_and_rank_for_isbn_lock_free(isbn)
+    
+    bookData = Array.new
+    threads = []
+
+    for e in isbn
+        threads << Thread.new(e) do |e|
+            
+            book = get_title_and_rank_for_isbn(e) 
+            book
+        end
+    end
+
+    for e in threads
+        bookData << e.value
+    end
+
+
+    bookData   
+            
+end
+
+def parallel_test_run(isbns)
+    start = Time.now
+    
+    titleAndRanks = parallel_test(isbns)
+    print_report(titleAndRanks)
+    finish = Time.now
+    
+    puts "Program completed in #{finish - start} seconds"
+end
+    
+def parallel_test(isbns)
+    Parallel.map(isbns, in_processes: isbns.length) do |e| 
+        book = get_title_and_rank_for_isbn(e) 
+        book    
+    end
+end
+
 
 isbns = read_file
 sequential_run(isbns)
 concurrent_run(isbns)
+lock_free_run(isbns)
+parallel_test_run(isbns)
