@@ -37,10 +37,9 @@ def print_report(titleAndRanks)
     }
 end
 
-def sequential_run
+def sequential_run(isbns)
     start = Time.now
 
-    isbns = read_file
     titleAndRanks = get_title_and_rank_for_all_isbns(isbns)
     print_report(titleAndRanks)
     finish = Time.now
@@ -48,11 +47,10 @@ def sequential_run
     puts "Program completed in #{finish - start} seconds."
 end
 
-def concurrent_run
+def concurrent_run(isbns)
     start = Time.now
     
-    isbn = read_file
-    titleAndRanks = get_title_and_rank_for_isbn_concurrent(isbn)
+    titleAndRanks = get_title_and_rank_for_isbn_concurrent(isbns)
     print_report(titleAndRanks)
     finish = Time.now
     
@@ -67,22 +65,11 @@ def get_title_and_rank_for_isbn_concurrent(isbn)
 
     for e in isbn
         threads << Thread.new(e) do |e|
-            books = Hash.new
-            encoded_url = URI.encode('https://www.amazon.com/exec/obidos/ASIN/' + e) 
-            url = URI.parse(encoded_url)
 
-            response = Net::HTTP.start(url.host, use_ssl: true) do |http|
-                http.get url.request_uri, 'User-Agent' => 'Mozilla/6.0'
-            end
-
-            page = Nokogiri::HTML response.body
-            bookName =  page.css('#productTitle').text
-            bookRank = page.css('#SalesRank').text[/\#.*\)/]
-            bookRank.slice! " in Books (See Top 100 in Books)"
-            bookRank = bookRank.gsub(/[^0-9]/, "").to_i   
+            book = get_title_and_rank_for_isbn(e) 
 
             mutex.synchronize do
-                titleAndRanks.push(books = ({:title => bookName, :ISBN => e, :rank => bookRank}))
+                titleAndRanks.push(book)
             end 
         end
     end
@@ -91,6 +78,6 @@ def get_title_and_rank_for_isbn_concurrent(isbn)
     titleAndRanks   
 end
 
-sequential_run
-concurrent_run
-
+isbns = read_file
+sequential_run(isbns)
+concurrent_run(isbns)
