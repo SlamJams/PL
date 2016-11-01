@@ -30,42 +30,32 @@ def get_title_and_rank_for_isbn(isbn)
     books = ({:title => bookName, :ISBN => isbn, :rank => bookRank})
 end
 
-def print_report(titleAndRanks)
+def print_report(start, titleAndRanks)
     puts "%-90s %-15s %-8s" %["Book Title", "ISBN", "Rank"]
     puts titleAndRanks.sort_by{ |e| e[:rank] }.collect{ |e|
         "%-90s %-15s %-8s" % [e[:title], e[:ISBN], e[:rank]]
     }
+    finish = Time.now
+    puts "Program completed in #{finish - start} seconds."
+    puts
 end
 
 def sequential_run(isbns)
     start = Time.now
-
     titleAndRanks = get_title_and_rank_for_all_isbns(isbns)
-    print_report(titleAndRanks)
-    finish = Time.now
-
-    puts "Program completed in #{finish - start} seconds."
+    print_report(start, titleAndRanks)
 end
 
 def concurrent_run(isbns)
     start = Time.now
-    
     titleAndRanks = get_title_and_rank_for_isbn_concurrent(isbns)
-    print_report(titleAndRanks)
-    finish = Time.now
-    
-    puts "Program completed in #{finish - start} seconds."
+    print_report(start, titleAndRanks)
 end
     
 def lock_free_run(isbns)
-    
     start = Time.now
-    
     titleAndRanks = get_title_and_rank_for_isbn_lock_free(isbns)
-    print_report(titleAndRanks)
-    finish = Time.now
-    
-    puts "Program completed in #{finish - start} seconds"
+    print_report(start, titleAndRanks)
 end
     
 
