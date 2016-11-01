@@ -2,9 +2,6 @@ require 'net/http'
 require 'uri'
 require 'nokogiri'
 require 'thread'
-require 'parallel'
-
-
 
 def read_file
     content = File.readlines("isbnList.txt").collect{ |e| e.strip || e}
@@ -100,41 +97,15 @@ def get_title_and_rank_for_isbn_lock_free(isbn)
 
     for e in isbn
         threads << Thread.new(e) do |e|
-            
-            book = get_title_and_rank_for_isbn(e) 
-            book
+            get_title_and_rank_for_isbn(e)
         end
     end
 
-    for e in threads
-        bookData << e.value
-    end
-
-
-    bookData   
-            
+    threads.map { |e| bookData << e.value }
+    bookData
 end
-
-def parallel_test_run(isbns)
-    start = Time.now
-    
-    titleAndRanks = parallel_test(isbns)
-    print_report(titleAndRanks)
-    finish = Time.now
-    
-    puts "Program completed in #{finish - start} seconds"
-end
-    
-def parallel_test(isbns)
-    Parallel.map(isbns, in_processes: isbns.length) do |e| 
-        book = get_title_and_rank_for_isbn(e) 
-        book    
-    end
-end
-
 
 isbns = read_file
 sequential_run(isbns)
 concurrent_run(isbns)
 lock_free_run(isbns)
-parallel_test_run(isbns)
