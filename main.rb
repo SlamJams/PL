@@ -19,7 +19,7 @@ def get_title_and_rank_for_isbn(isbn)
     url = URI.parse(encoded_url)
 
     response = Net::HTTP.start(url.host, use_ssl: true) do |http|
-        http.get url.request_uri, 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36'
+        http.get url.request_uri, 'User-Agent' => 'Mozilla/5.0'
     end
 
     page = Nokogiri::HTML response.body
@@ -36,19 +36,7 @@ def print_report(titleAndRanks)
         "%-90s %-15s %-8s" % [e[:title], e[:ISBN], e[:rank]]
     }
 end
-
-def sequential_run(isbns)
-    common_operations{ get_title_and_rank_for_all_isbns(isbns) } 
-end
-
-def concurrent_run(isbns)
-    common_operations{ get_title_and_rank_for_isbn_concurrent(isbns) }
-end
-    
-def lock_free_run(isbns)
-    common_operations{ get_title_and_rank_for_isbn_lock_free(isbns) }
-end
-    
+   
 def get_title_and_rank_for_isbn_concurrent(isbn)
     mutex = Mutex.new
     titleAndRanks = Array.new
@@ -83,7 +71,7 @@ def get_title_and_rank_for_isbn_lock_free(isbn)
     bookData
 end
 
-def common_operations
+def compute_time
     start = Time.now
     print_report(yield)
     finish = Time.now
@@ -92,6 +80,6 @@ def common_operations
 end
 
 isbns = read_file
-sequential_run(isbns)
-concurrent_run(isbns)
-lock_free_run(isbns)
+compute_time{ get_title_and_rank_for_all_isbns(isbns) } 
+compute_time{ get_title_and_rank_for_isbn_concurrent(isbns) }
+compute_time{ get_title_and_rank_for_isbn_lock_free(isbns) }
