@@ -17,15 +17,17 @@ def get_title_and_rank_for_isbn(isbn)
     books = Hash.new
     encoded_url = URI.encode('https://www.amazon.com/exec/obidos/ASIN/' + isbn) 
     url = URI.parse(encoded_url)
-
     response = Net::HTTP.start(url.host, use_ssl: true) do |http|
-        http.get url.request_uri, 'User-Agent' => 'Mozilla/5.0'
+        http.get url.request_uri, 'User-Agent' => 'Mozilla/5.2'
     end
-
     page = Nokogiri::HTML response.body
     bookName =  page.css('#productTitle').text
     bookRank = page.css('#SalesRank').text[/\#.*\)/]
-    bookRank.slice! " in Books (See Top 100 in Books)"
+    begin
+        bookRank.slice! " in Books (See Top 100 in Books)"
+    rescue
+        abort("Amazon server rejected our request. In line 22 of the program, try another version of Mozilla for the User-Agent, e.g Mozilla/x.x")
+    end
     bookRank = bookRank.gsub(/[^0-9]/, "").to_i     
     books = ({:title => bookName, :ISBN => isbn, :rank => bookRank})
 end
@@ -44,7 +46,6 @@ def get_title_and_rank_for_isbn_concurrent(isbn)
 
     for e in isbn
         threads << Thread.new(e) do |e|
-            
             book = get_title_and_rank_for_isbn(e) 
 
             mutex.synchronize do
